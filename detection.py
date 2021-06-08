@@ -67,15 +67,12 @@ test_data.reset_index(drop=True,inplace=True)
 data
 
 #classes proportion in dependent variable in train and test dataset
-print('===========Train Data =========')
+print('Train Data')
 print(train_data['label'].value_counts())
 print(len(train_data))
-print('==============================')
-
-print('===========Test Data =========')
+print('Test Data')
 print(test_data['label'].value_counts())
 print(len(test_data))
-print('==============================')
 
 #train and validation dataset splitting
 X_train, X_valid, y_train, y_valid = train_test_split(train_data['tweet'].tolist(),\
@@ -109,8 +106,6 @@ x_test = pad_sequences(x_test, padding='post', maxlen=maxlen)
 train_labels = np.asarray(y_train)
 valid_labels = np.asarray(y_valid)
 test_labels = np.asarray(test_data['label'].tolist())
-
-
 print('Train data len:'+str(len(x_train)))
 print('Class distribution'+str(Counter(train_labels)))
 
@@ -150,13 +145,8 @@ model.add(tf.keras.layers.Dense(8, activation='relu',\
                                 kernel_regularizer=regularizers.l2(0.001),\
                                 bias_regularizer=regularizers.l2(0.001),))
 model.add(tf.keras.layers.Dropout(0.4))
-
-
 model.add(tf.keras.layers.Dense(1,activation='sigmoid'))
                                
-
-
-
 model.summary()
 model.compile(loss=tf.keras.losses.BinaryCrossentropy(),optimizer=tf.keras.optimizers.Adam(1e-3),metrics=[tf.keras.metrics.BinaryAccuracy()])
 
@@ -174,59 +164,23 @@ x_test = pad_sequences(x_test, padding='post', maxlen=maxlen)
 
 #Generate predictions for all samples
 predictions = model.predict(x_test)
-
-#decide the cutoff for classifying the predicted probabilities as 1 or 0
-def plot_roc(name, labels, predictions, **kwargs):
-    fp, tp, thresholds = sklearn.metrics.roc_curve(labels, predictions)
-    plt.plot(fp, tp, label=name, linewidth=2, **kwargs)
-    plt.xlabel('False positives Rate')
-    plt.ylabel('True positives Rate')
-    plt.xlim([-0.03, 1.0])
-    plt.ylim([0.0, 1.03])
-    plt.grid(True)
-    thresholdsLength = len(thresholds)
-    thresholds_every = 1000
-    colorMap = plt.get_cmap('jet', thresholdsLength)
-    for i in range(0, thresholdsLength, thresholds_every):
-        threshold_value_with_max_four_decimals = str(thresholds[i])[:5]
-        plt.text(fp[i] - 0.03, tp[i] + 0.001, threshold_value_with_max_four_decimals, fontdict={'size': 15}, color=colorMap(i/thresholdsLength));
-
-    ax = plt.gca()
-    ax.set_aspect('equal')
-
-mpl.rcParams['figure.figsize'] = (7,7)
-
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-plot_roc("Valid Baseline", valid_labels, valid_predict, color=colors[0], linestyle='--')
-plt.legend(loc='lower right')
-
-cutoff=0.86
-test_data['pred_sentiment']= predictions
-test_data['pred_sentiment'] = np.where((test_data.pred_sentiment >= cutoff),1,test_data.pred_sentiment)
-test_data['pred_sentiment'] = np.where((test_data.pred_sentiment < cutoff),0,test_data.pred_sentiment)
-
-labels = [0, 1]
-print(classification_report(test_data['label'].tolist(),test_data['pred_sentiment'].tolist(),labels=labels))
-
+#accessing test file
 final_test=pd.read_csv("test.csv")
-
 ftest=final_test.copy()
 ftest.drop(columns=['id'],axis=1,inplace=True)
 ftest['tweet'] = ftest['tweet'].apply(clean_tweet)
 
 f_test  = np.array( tokenizer.texts_to_sequences(ftest['tweet'].tolist()) )
 f_test = pad_sequences(f_test, padding='post', maxlen=maxlen)
-
-display((x_test))
-display((f_test))
+f_test
 
 #predict on actual test data
 predictions = model.predict(f_test)
 
 #mapping prediction to 1 or 0
 ftest['pred_sentiment']= predictions
-ftest['pred_sentiment'] = np.where((ftest.pred_sentiment >= cutoff),1,ftest.pred_sentiment)
-ftest['pred_sentiment'] = np.where((ftest.pred_sentiment < cutoff),0,ftest.pred_sentiment)
+ftest['pred_sentiment'] = np.where((ftest.pred_sentiment >= cutoff),0,test.pred_sentiment)
+ftest['pred_sentiment'] = np.where((ftest.pred_sentiment < cutoff),1,test.pred_sentiment)
 
-#processed tweets
+#tweets - offensive 
 ftest[ftest['pred_sentiment']==0]
