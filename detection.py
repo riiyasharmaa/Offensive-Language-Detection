@@ -169,17 +169,52 @@ final_test=pd.read_csv("test.csv")
 ftest=final_test.copy()
 ftest.drop(columns=['id'],axis=1,inplace=True)
 ftest['tweet'] = ftest['tweet'].apply(clean_tweet)
-
 f_test  = np.array( tokenizer.texts_to_sequences(ftest['tweet'].tolist()) )
 f_test = pad_sequences(f_test, padding='post', maxlen=maxlen)
 f_test
+
+#make predictions on validation dataset
+valid_predict= model.predict(x_valid)
+print(valid_predict[:10])
+
+#decide the cutoff for classifying the predicted probabilities as 1 or 0
+def plot_roc(name, labels, predictions, **kwargs):
+    fp, tp, thresholds = sklearn.metrics.roc_curve(labels, predictions)
+    plt.plot(fp, tp, label=name, linewidth=2, **kwargs)
+    plt.xlabel('False positives Rate')
+    plt.ylabel('True positives Rate')
+    plt.xlim([-0.03, 1.0])
+    plt.ylim([0.0, 1.03])
+    plt.grid(True)
+    thresholdsLength = len(thresholds)
+    thresholds_every = 1000
+    colorMap = plt.get_cmap('jet', thresholdsLength)
+    for i in range(0, thresholdsLength, thresholds_every):
+        threshold_value_with_max_four_decimals = str(thresholds[i])[:5]
+        plt.text(fp[i] - 0.03, tp[i] + 0.001, threshold_value_with_max_four_decimals, fontdict={'size': 15}, color=colorMap(i/thresholdsLength));
+
+    ax = plt.gca()
+    ax.set_aspect('equal')
+
+mpl.rcParams['figure.figsize'] = (7,7)
+
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+plot_roc("Valid Baseline", valid_labels, valid_predict, color=colors[0], linestyle='--')
+plt.legend(loc='lower right')
+
+cutoff=0.86
+test_data['pred_sentiment']= predictions
+test_data['pred_sentiment'] = np.where((test_data.pred_sentiment >= cutoff),1,test_data.pred_sentiment)
+test_data['pred_sentiment'] = np.where((test_data.pred_sentiment < cutoff),0,test_data.pred_sentiment)
+
+labels = [0, 1]
+print(classification_report(test_data['label'].tolist(),test_data['pred_sentiment'].tolist(),labels=labels))
 
 #predict on actual test data
 predictions = model.predict(f_test)
 
 #mapping prediction to 1 or 0
 ftest['pred_sentiment']= predictions
-ftest['pred_sentiment'] = np.where((ftest.pred_sentiment >= cutoff),0,test.pred_sentiment)
 ftest['pred_sentiment'] = np.where((ftest.pred_sentiment < cutoff),1,test.pred_sentiment)
 
 #tweets - offensive 
